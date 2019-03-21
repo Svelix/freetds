@@ -761,8 +761,11 @@ tds7_bcp_send_colmetadata(TDSSOCKET *tds, TDSBCPINFO *bcpinfo)
 		 * different from BCP format
 		 */
 		if (is_blob_type(bcpcol->on_server.column_type)) {
-			converted_name = tds_convert_string(tds, tds->conn->char_convs[client2ucs2], tds_dstr_cstr(&bcpinfo->tablename), (int)tds_dstr_len(&bcpinfo->tablename), &converted_len);
+			converted_name = tds_convert_string(tds, tds->conn->char_convs[client2ucs2],
+							    tds_dstr_cstr(&bcpinfo->tablename),
+							    (int)tds_dstr_len(&bcpinfo->tablename), &converted_len);
 			if (!converted_name) {
+				tds_close_socket(tds);
 				return TDS_FAIL;
 			}
 
@@ -773,13 +776,16 @@ tds7_bcp_send_colmetadata(TDSSOCKET *tds, TDSBCPINFO *bcpinfo)
 			tds_convert_string_free(tds_dstr_cstr(&bcpinfo->tablename), converted_name);
 		}
 
-		converted_name = tds_convert_string(tds, tds->conn->char_convs[client2ucs2], tds_dstr_cstr(&bcpcol->column_name), (int)tds_dstr_len(&bcpcol->column_name), &converted_len);
+		converted_name = tds_convert_string(tds, tds->conn->char_convs[client2ucs2],
+						    tds_dstr_cstr(&bcpcol->column_name),
+						    (int)tds_dstr_len(&bcpcol->column_name), &converted_len);
 		if (!converted_name) {
+			tds_close_socket(tds);
 			return TDS_FAIL;
 		}
 
 		/* UTF-16 length is always size / 2 even for 4 byte letters (yes, 1 letter of length 2) */
-		tds_put_byte(tds, (unsigned char)(converted_len / 2));
+		TDS_PUT_BYTE(tds, converted_len / 2);
 		tds_put_n(tds, converted_name, converted_len);
 
 		tds_convert_string_free(tds_dstr_cstr(&bcpcol->column_name), converted_name);
